@@ -1,0 +1,112 @@
+---
+title: "Iris Classification"
+author: "Katie M Brown"
+date: "April 12, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question
+
+What species of flower is the iris, based off of it's physical features?
+
+
+## Methodology
+
+I used the k-nearest neighbor classification algorithm to group the observations by features.  The steps I used are as follows: standardize the data, split data into train and test sets, build a knn model, use the model with k set to some value to make an initial prediction, check misclassification rate.  Then, I'll choose the best k value by plotting the misclassification rates and finding where it is minimized.  
+
+## Libraries
+
+I used the following libraries for this project: ISLR (to get iris data), caTools (for splitting data), ggplot2 (for visualizations), class (for classification)
+```{r warning=FALSE}
+library(ISLR)
+library(caTools)
+library(ggplot2)
+library(class)
+```
+
+## Getting, Cleaning and standardizing the data
+
+I loaded the ISLR package so that I could use the iris dataset.  I did some initial reconnaissance here:
+
+```{r warning=FALSE}
+str(iris)
+summary(iris)
+any(is.na(iris))
+```
+
+From here, I saw that the label data, Species, was a factor with 3 levels.  I also noted that there are no missing values to deal with. I then standardized the data:
+
+```{r warning=FALSE}
+species <- iris$Species
+standard.iris <- as.data.frame(scale(iris[,-5]))
+```
+
+## Split the data
+
+After standardizing the data, I split it into training and testing data sets.  I did this using the caTools package and the sample.split function:
+
+```{r warning=FALSE}
+set.seed(101)
+sample <- sample.split(standard.iris$Sepal.Length,SplitRatio=.8)
+
+train.iris <- subset(standard.iris,sample == TRUE)
+train.species <- species[sample == TRUE]
+
+test.iris <- subset(standard.iris,sample == FALSE)
+test.species <- species[sample == FALSE]
+```
+
+## KNN Classification
+
+Now I will run the KNN algorithm with k set equal to 12.  This is an initial k value that will most likely eventually change but we have to start somewhere.  I chose this k value because it is the closest integer to the square root of 150.  After running the model, I checked the misclassification error.
+
+```{r warning=FALSE}
+predicted.species <- knn(train.iris, test.iris, train.species, k = 12)
+head(predicted.species)
+
+misclassification.error <- mean(test.species != predicted.species)
+```
+
+
+## Choosing K where error rate is minimized
+
+At this point, I looped through each possible k value and test the misclassification error to find the ideal k.
+
+```{r warning=FALSE}
+predicted.species <- NULL
+error.rate <- NULL
+
+for(i in 1:12) {
+      set.seed(101)
+      predicted.species<- knn(train.iris, test.iris, train.species, k = i)
+      error.rate[i] <- mean(test.species != predicted.species)
+}
+```
+
+Then I visualized the error rates vs. their associated k value:
+
+```{r warning=FALSE}
+
+k.values <- 1:12
+error.df <- data.frame(error.rate, k.values)
+
+ggplot(error.df, aes(k.values, error.rate)) + geom_point() + geom_line(lty='dotted', col = 'red')
+```
+
+In this example, the error rate is minimized first when k = 5.  The predicted species along with the error rate:
+
+```{r}
+predicted.species <- knn(train.iris, test.iris, train.species, k = 5)
+print(predicted.species)
+
+misclassification.error <- mean(test.species != predicted.species)
+print(misclassification.error)
+```
+
+## Summary
+
+Based on this model, only 3.4% of the Iris' were classified incorrectly.  This accounts for approximately 1.
